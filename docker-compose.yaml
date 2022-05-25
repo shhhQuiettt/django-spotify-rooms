@@ -1,0 +1,28 @@
+version: "3.9"
+services:
+  db:
+    image: mariadb
+    volumes:
+      - ./data/db:/var/lib/mysql
+    environment:
+# FOR DEV USAGE ONLY
+      - MARIADB_ROOT_PASSWORD=toor
+      - MARIADB_DATABASE=spotifyRooms
+      - MARIADB_USER=db_admin
+      - MARIADB_PASSWORD=1@Qwerty
+    ports:
+      - "33061:3306"
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
+    environment:
+# FOR DEV USAGE ONLY
+      - MARIADB_DATABASE=spotifyRooms
+      - MARIADB_PASSWORD=1@Qwerty
+      - MARIADB_USER=db_admin
+    depends_on:
+      - db
