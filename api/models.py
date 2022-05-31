@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.sessions.models import Session
 from random import choices
 
 # Create your models here.
@@ -11,9 +12,9 @@ def get_random_code() -> str:
 
 
 class Room(models.Model):
-    code = models.CharField(max_length=6, primary_key=True, default=get_random_code)
-    host = models.CharField(max_length=16)
+    host = models.CharField(max_length=40, primary_key=True)  # Session_id of the host
+    code = models.CharField(max_length=6, unique=True, default=get_random_code)
     votes_to_skip = models.IntegerField()
-    max_capacity = models.IntegerField()
     user_can_pause = models.BooleanField(default=True)
+    user_can_control = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
