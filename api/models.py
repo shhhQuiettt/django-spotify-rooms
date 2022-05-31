@@ -12,8 +12,8 @@ def get_random_code() -> str:
 
 
 class Room(models.Model):
-    host = models.CharField(max_length=40, primary_key=True)  # Session_id of the host
-    code = models.CharField(max_length=6, unique=True, default=get_random_code)
+    code = models.CharField(max_length=6, primary_key=True, default=get_random_code)
+    host = models.CharField(max_length=40, unique=True)  # Session_id of the host
     votes_to_skip = models.IntegerField()
     user_can_pause = models.BooleanField(default=True)
     user_can_control = models.BooleanField(default=True)
