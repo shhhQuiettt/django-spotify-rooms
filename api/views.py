@@ -57,4 +57,6 @@ class RoomCreateView(
         if not request.session.exists(request.session.session_key):
             request.session.create()
 
-        return self.create(request, *args, **kwargs)
+        res = self.create(request, *args, **kwargs)
+        request.session["code"] = res.data["code"]
+        return res
