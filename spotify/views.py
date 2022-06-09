@@ -90,9 +90,10 @@ def refresh_token(request):
         room = get_object_or_404(Room, code=room_code)
         is_host_or_403(room, request.session)
 
-        if hasattr(room, "spotify_access_token"):
+        if not hasattr(room, "spotify_access_token"):
             return Response(
-                {"error": "Nothing to refresh", "message": "Token does not exists"}
+                {"error": "Nothing to refresh", "message": "Token does not exists"},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         res = create_or_refresh_token(room)
@@ -106,3 +107,7 @@ def refresh_token(request):
 
         if serializer.is_valid():
             serializer.save()
+
+        return Response(
+            {"message": "Successfully refreshed"}, status=status.HTTP_200_OK
+        )

@@ -1,12 +1,15 @@
 from django.test import TestCase
 from rest_framework import status
-from rest_framework.test import APITestCaseuth-callback?code=AQBDADr9GnVcRsIms3YXtOKMPGp8h4T8Da8bAu-gKH2kdTQ_XTbMyFdQp_yZnkg4gZWawrxjjo9O1Zuq1WXWHkrblQQqHhQCYaM5lNT-ayAYgdOR7DDpsNbb4-UcOQFqJZnorIB9qurbCJPuyPsAHJEeGGwX9qF57I7y_VE8VtPY-H0vJGFiIpCu97vABq56zEztFN9kduP0CQ9dXH0gsywGP72k1Sa63dD4AEDBLayalP0M7gixP6pKnmzSnmOJB-1lwRDFjAq_IRK_R1zG3MsaIaW9XvmkL5DJKRc1UsQl1A&state=gl9ddUjau1VcAWVn
+from rest_framework.test import APITestCase
+from rest_framework import status
 from .credentials import SPOTIFY_AUTH_URL, SPOTIFY_GET_TOKEN_URL
 from django.urls import reverse
 from api.models import Room
+from spotify.models import SpotifyAccessToken
+from unittest.mock import patch
 
 
-def create_room(host="0" * 40, votes_to_skip=3):
+def create_test_room(host="0" * 40, votes_to_skip=3):
     data = {
         "host": host,
         "votes_to_skip": votes_to_skip,
@@ -14,14 +17,34 @@ def create_room(host="0" * 40, votes_to_skip=3):
     return Room.objects.create(**data)
 
 
-def get_test_spotify_token():
-    test_token = {}
+def get_test_token():
+    test_token = {
+        "access_token": "BAghSW8TbttNHo4Pq1oSHPSpA3N2110rn8tAdVSteKPN_KCGYmobKdUxJrh0bWlCYa7WuZJer9E8lqJA608w65Sar8ayeJ1m6rmwzQ5wCn38Wji9DR3LiBv-RYDADeYcdMssEGBIkndwftAjv8hxEWLbdlWGekK5QZdcceozVCAkMIQ",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "refresh_token": "A3BS0meP8fmcJegBsrGpyp8kzyaseWqmGdkIla_8Th2ZMsgXd8Xd7n7lagDhTgzDBHkeSke4SgE7H9895EtyTj6UWdwlemHw02sIj-Sn88vlXtBWfOM0_YfFiYKOjV2w_OY",
+        "scope": "user-modify-playback-state user-read-playback-state user-read-currently-playing",
+    }
+    return test_token
+
+
+class MockResponse:
+    """
+    Used to mock create_or_refresh_token api call
+    """
+
+    def __init__(self, json_data, status_code):
+        self.json_data = json_data
+        self.status_code = status_code
+
+    def json(self):
+        return self.json_data
 
 
 class SpotifyTestCase(APITestCase):
     def test_authenticate_spotify_redirects(self):
         session = self.client.session
-        room = create_room(session.session_key)
+        room = create_test_room(session.session_key)
         session["code"] = room.code
         session.save()
 
@@ -44,10 +67,9 @@ class SpotifyTestCase(APITestCase):
         #         print(res.data)
         #     raise e
 
-
     def test_authenticate_spotify_when_not_host(self):
         session = self.client.session
-        room = create_room()
+        room = create_test_room()
         session["code"] = room.code
         session.save()
         res = self.client.get(reverse("spotify_authorization"))
@@ -61,17 +83,55 @@ class SpotifyTestCase(APITestCase):
 
     def test_authentication_callback_when_token_given(self):
         session = self.client.session
-        room = create_room(session.session_key)
+        room = create_test_room(host=session.session_key)
         session["code"] = room.code
         session.save()
 
-        res = self.client.get(reverse("spotify_authorization"))
+        with patch(
+            "spotify.views.create_or_refresh_token"
+        ) as mocked_create_or_refresh_token:
+            mocked_create_or_refresh_token.return_value = MockResponse(
+                json_data=get_test_token(),
+                status_code=status.HTTP_200_OK,
+            )
+
+            res = self.client.get(
+                reverse("authorization callback"),
+                {"code": "1234", "state": "123"},
+            )
+
+            self.assertEqual(res.status_code, status.HTTP_200_OK, msg=f"{res.data}")
+            self.assertEqual(
+                SpotifyAccessToken.objects.filter(room=room.code).count(), 1
+            )
+            self.assertTrue(hasattr(room, "spotify_access_token"))
 
     def test_authentication_callback_when_error_given(self):
         session = self.client.session
-        room = create_room(session.session_key)
+        room = create_test_room(host=session.session_key)
         session["code"] = room.code
         session.save()
 
-        res = self.client.get(reverse("spotify_authorization"))
+        with patch(
+            "spotify.views.create_or_refresh_token"
+        ) as mocked_create_or_refresh_token:
+            mocked_create_or_refresh_token.return_value = MockResponse(
+                json_data={
+                    "error": "Some error",
+                    "error_message": "Something went wrong",
+                },
+                status_code=status.HTTP_418_IM_A_TEAPOT,
+            )
 
+            res = self.client.get(
+                reverse("authorization callback"),
+                {"code": "1234", "state": "123"},
+            )
+
+            self.assertEqual(
+                res.status_code, status.HTTP_401_UNAUTHORIZED, msg=f"{res.data}"
+            )
+            self.assertEqual(
+                SpotifyAccessToken.objects.filter(room=room.code).count(), 0
+            )
+            self.assertFalse(hasattr(room, "spotify_access_token"))

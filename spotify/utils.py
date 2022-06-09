@@ -17,8 +17,9 @@ def create_or_refresh_token(room, request_code=None):
 
     data = (
         {
+            # "response_type": "code",
             "grant_type": "refresh_token",
-            "refresh_token": room.spotify_access_token,
+            "refresh_token": room.spotify_access_token.refresh_token,
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
         }
