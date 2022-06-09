@@ -1,7 +1,11 @@
-from django.shortcuts import redirect
-from rest_framework.decorators import api_view
+from .serializers import SpotifyAccessTokenSerializer
+from .utils import create_or_refresh_token
+from django.shortcuts import redirect, get_object_or_404
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
+from api.shortcuts import room_code_or_403, is_host_or_403
+from api.models import Room
 from .credentials import (
     SPOTIFY_AUTH_URL,
     SPOTIFY_GET_TOKEN_URL,
@@ -15,14 +19,19 @@ from django.utils.crypto import get_random_string
 from django.utils.http import urlencode
 import requests
 from base64 import b64encode
-
-# Create your views here.
+from time import time
 
 
 @api_view(["GET"])
+# TODO: implement permission approach
+# @permission_classes([IsHost])
 def authenticate_spotify(request):
-    print(REDIRECT_URI)
     if request.method == "GET":
+        # Checks if user is in a room and if he is the host
+        room_code = room_code_or_403(request.session)
+
+        is_host_or_403(get_object_or_404(Room, code=room_code), request.session)
+
         redirect_data = {
             "response_type": "code",
             "client_id": CLIENT_ID,
@@ -45,23 +54,55 @@ def authentication_callback(request):
                 },
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        code = request.query_params["code"]
+
+        room_code = room_code_or_403(request.session)
+        room = get_object_or_404(Room, code=room_code)
+        is_host_or_403(room, request.session)
+
+        # Obtaining access token
+        request_code = request.query_params["code"]
         state = request.query_params["state"]
 
-        get_token_data = {
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": REDIRECT_URI,
-        }
+        res = create_or_refresh_token(room, request_code)
 
-        authorization_value = f"{CLIENT_ID}:{CLIENT_SECRET}"
-        get_token_headers = {
-            "Authorization": b"Basic " + b64encode(authorization_value.encode("ascii")),
-            "Content-Type": "application/x-www-form-urlencoded",
-        }
+        if res.status_code != status.HTTP_200_OK:
+            return Response({"errors": res.json()}, status=status.HTTP_401_UNAUTHORIZED)
 
-        res = requests.post(
-            url=SPOTIFY_GET_TOKEN_URL, headers=get_token_headers, data=get_token_data
+        data = res.json()
+        data["room"] = room.code
+        serializer = SpotifyAccessTokenSerializer(data=data)
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+
+        return Response(
+            {"message": "Successfully authorized"}, status=status.HTTP_200_OK
         )
 
-        return Response(res.json())
+
+@api_view(["POST"])
+# TODO: implement permission approach
+# @permission_classes([IsHost])
+def refresh_token(request):
+    if request.method == "POST":
+        # Checks if user is in a room and if he is the host
+        room_code = room_code_or_403(request.session)
+        room = get_object_or_404(Room, code=room_code)
+        is_host_or_403(room, request.session)
+
+        if hasattr(room, "spotify_access_token"):
+            return Response(
+                {"error": "Nothing to refresh", "message": "Token does not exists"}
+            )
+
+        res = create_or_refresh_token(room)
+        data = res.json()
+        data["room"] = room.code
+
+        if res.status_code != status.HTTP_200_OK:
+            return Response({"errors": res.json()}, status=status.HTTP_401_UNAUTHORIZED)
+
+        serializer = SpotifyAccessTokenSerializer(data=data)
+
+        if serializer.is_valid():
+            serializer.save()

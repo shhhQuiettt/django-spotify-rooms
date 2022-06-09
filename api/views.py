@@ -28,16 +28,19 @@ class RoomView(
 
     def get(self, request, code, *args, **kwargs):
         if Room.objects.filter(code=code).exists():
-            request.session["room_code"] = code
+            request.session["code"] = code
 
         return self.retrieve(request, *args, **kwargs)
 
     def put(self, request, *args, **kwargs):
         return self.update(request, *args, **kwargs)
 
+    # TODO: ADD UNJOIN
+
 
 class RoomCreateView(
-    generics.GenericAPIView, mixins.CreateModelMixin, mixins.DestroyModelMixin
+    generics.GenericAPIView,
+    mixins.CreateModelMixin,
 ):
     serializer_class = RoomSerializer
     queryset = Room.objects.all()

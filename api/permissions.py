@@ -11,3 +11,12 @@ class IsHostOrJoinableOnly(permissions.BasePermission):
             request.method in permissions.SAFE_METHODS
             or obj.host == request.session.session_key
         )
+
+
+class IsHost(permissions.BasePermission):
+    """
+    Allow to perform only if user is the host
+    """
+
+    def has_object_permission(self, request, view, obj):
+        return obj.host == request.session.session_key
