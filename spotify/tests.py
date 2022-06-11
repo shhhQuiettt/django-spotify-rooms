@@ -179,9 +179,9 @@ class TrackControlTestCase(APITestCase):
 
         create_test_token(room)
 
-        with patch("spotify.views.call_spotify_api") as mocked_call_spotify_api:
+        with patch("spotify.utils.requests.get") as mocked_requests_get:
             with open(os.path.join(pwd, "test_data/mock_song.json")) as mock_song_file:
-                mocked_call_spotify_api.return_value = MockResponse(
+                mocked_requests_get.return_value = MockResponse(
                     json_data=json.load(mock_song_file),
                     status_code=status.HTTP_200_OK,
                 )

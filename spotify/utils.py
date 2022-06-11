@@ -8,7 +8,7 @@ from .credentials import (
 from base64 import urlsafe_b64encode
 import requests
 
-
+# TODO: this function should create token instance or be renamed to  get_...
 def create_or_refresh_token(room, request_code=None):
     # authorization_value = f"{CLIENT_ID}:{CLIENT_SECRET}"
     headers = {
