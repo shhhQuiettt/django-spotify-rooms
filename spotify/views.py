@@ -1,25 +1,30 @@
-from .serializers import SpotifyAccessTokenSerializer
-from .utils import create_or_refresh_token
-from django.shortcuts import redirect, get_object_or_404
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework import status
-from api.shortcuts import room_code_or_403, is_host_or_403
+from time import time
+
+import requests
 from api.models import Room
-from .credentials import (
-    SPOTIFY_AUTH_URL,
-    SPOTIFY_GET_TOKEN_URL,
-    CLIENT_ID,
-    SCOPE,
-    REDIRECT_URI,
-    STATE,
-    CLIENT_SECRET,
-)
+from api.permissions import InRoom
+from api.shortcuts import is_host_or_403, room_code_or_403
+from django.shortcuts import get_object_or_404, redirect
 from django.utils.crypto import get_random_string
 from django.utils.http import urlencode
-import requests
-from base64 import b64encode
-from time import time
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from spotify.permissions import SpotifyAuthorized
+
+from .credentials import (
+    CLIENT_ID,
+    CLIENT_SECRET,
+    REDIRECT_URI,
+    SCOPE,
+    SPOTIFY_AUTH_URL,
+    SPOTIFY_GET_TOKEN_URL,
+    STATE,
+)
+from .serializers import SpotifyAccessTokenSerializer
+from .utils import call_spotify_api, create_or_refresh_token
 
 
 @api_view(["GET"])
@@ -43,6 +48,8 @@ def authenticate_spotify(request):
         return redirect(url, permanent=True)
 
 
+# TODO: Change to class-based view =>
+# => implement create mixin
 @api_view(["GET"])
 def authentication_callback(request):
     if request.method == "GET":
@@ -80,9 +87,8 @@ def authentication_callback(request):
         )
 
 
+# TODO: implement class-basef view nad generics update
 @api_view(["POST"])
-# TODO: implement permission approach
-# @permission_classes([IsHost])
 def refresh_token(request):
     if request.method == "POST":
         # Checks if user is in a room and if he is the host
@@ -97,17 +103,58 @@ def refresh_token(request):
             )
 
         res = create_or_refresh_token(room)
-        data = res.json()
-        data["room"] = room.code
 
         if res.status_code != status.HTTP_200_OK:
             return Response({"errors": res.json()}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = SpotifyAccessTokenSerializer(data=data)
+        data = res.json()
+        data["room"] = room.code
+        data["refresh_token"] = room.spotify_access_token.refresh_token
 
-        if serializer.is_valid():
+        serializer = SpotifyAccessTokenSerializer(room.spotify_access_token, data=data)
+
+        if serializer.is_valid(raise_exception=True):
             serializer.save()
 
         return Response(
             {"message": "Successfully refreshed"}, status=status.HTTP_200_OK
         )
+
+
+class CurrentTrack(APIView):
+    permission_classes = [InRoom, SpotifyAuthorized]
+
+    def get(self, request):
+        GET_TRACK_ENDPOINT = "/me/player/currently-playing"
+
+        room_code = request.session["code"]
+        room = get_object_or_404(Room, code=room_code)
+        self.check_object_permissions(request, room)
+
+        res = call_spotify_api(
+            GET_TRACK_ENDPOINT, token=room.spotify_access_token.token
+        )
+
+        if res.status_code >= 300:
+            return Response(res.json(), res.status_code)
+
+        if res.status_code == status.HTTP_204_NO_CONTENT:
+            return Response(
+                {"message": "No current track provided"},
+                status=status.HTTP_204_NO_CONTENT,
+            )
+
+        data = res.json()
+        # return Response(data)
+        song_data = {}
+        song_data["title"] = data["item"]["name"]
+        song_data["duration_s"] = data["item"]["duration_ms"] / 1000
+        song_data["progress_s"] = data["progress_ms"] / 1000
+        song_data["album_cover_url"] = data["item"]["album"]["images"][0]["url"]
+        song_data["is_playing"] = data["is_playing"]
+        song_data["song_id"] = data["item"]["id"]
+
+        aritsts = ", ".join([artist["name"] for artist in data["item"]["artists"]])
+
+        song_data["artists"] = aritsts
+        return Response(song_data, status=status.HTTP_200_OK)
