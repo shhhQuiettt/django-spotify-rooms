@@ -166,7 +166,7 @@ class CurrentTrack(APIView):
 
 
 class PauseTrack(APIView):
-    permission_classes = [InRoom, SpotifyAuthorized, IsHost | CanControl]
+    permission_classes = [InRoom, SpotifyAuthorized, CanPlayPause | IsHost]
 
     def put(self, request):
         room_code = request.session["code"]
@@ -180,12 +180,12 @@ class PauseTrack(APIView):
         if res.status_code >= 400:
             res_data = (
                 {"spotify": res.json()}
-                if response.headers.get("Content-Type").startswith("application/json")
+                if res.headers.get("Content-Type").startswith("application/json")
                 else {}
             )
             return Response(res_data, status=res.status_code)
 
-        return Response(status=res.status_code)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PlayTrack(APIView):
@@ -203,7 +203,7 @@ class PlayTrack(APIView):
         if res.status_code >= 400:
             res_data = (
                 {"spotify": res.json()}
-                if response.headers.get("Content-Type").startswith("application/json")
+                if res.headers.get("Content-Type").startswith("application/json")
                 else {}
             )
             return Response(res_data, status=res.status_code)

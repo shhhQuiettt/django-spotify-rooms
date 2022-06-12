@@ -9,14 +9,13 @@ from api.models import Room
 from spotify.models import SpotifyAccessToken
 from unittest.mock import patch
 import json
+from api import permissions as room_permissions
+from spotify import permissions as spotify_permissions
 
 
-def create_test_room(host="0" * 40, votes_to_skip=3):
-    data = {
-        "host": host,
-        "votes_to_skip": votes_to_skip,
-    }
-    return Room.objects.create(**data)
+def create_test_room(host="0" * 40, votes_to_skip=3, **kwargs):
+
+    return Room.objects.create(host=host, votes_to_skip=votes_to_skip, **kwargs)
 
 
 def create_test_token(room=None):
@@ -40,6 +39,7 @@ class MockResponse:
     def __init__(self, json_data, status_code):
         self.json_data = json_data
         self.status_code = status_code
+        self.headers = {"Content-Type": "application/json"}
 
     def json(self):
         return self.json_data
@@ -203,3 +203,168 @@ class TrackControlTestCase(APITestCase):
 
         # self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
         # self.assertEqual(str(res.data["detail"]), "You have to be host of the room")
+
+
+class PlayPauseTestCase(APITestCase):
+    # TODO: Create shortcuts to provide test context like in romm, logged
+    # decorators maybe?
+
+    # PAUSE
+    def test_pause_track_when_not_in_a_room_forbidden(self):
+        url = reverse("pause track")
+        res = self.client.put(url)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(str(res.data["detail"]), room_permissions.InRoom.message)
+
+    def test_pause_track_when_room_rules_not_authorized(self):
+        url = reverse("pause track")
+
+        room = create_test_room(user_can_pause=True)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        res = self.client.put(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            str(res.data["detail"]), spotify_permissions.SpotifyAuthorized.message
+        )
+
+    def test_pause_track_when_room_rules_not_allow_forbidden(self):
+        url = reverse("pause track")
+
+        room = create_test_room(user_can_pause=False)
+        token = create_test_token(room)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+        with patch("spotify.utils.requests.put") as mocked_requests_put:
+            mocked_requests_put.return_value = MockResponse(
+                {}, status.HTTP_418_IM_A_TEAPOT
+            )
+            res = self.client.put(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, msg=res.data)
+
+    def test_pause_track_when_allowed(self):
+        url = reverse("pause track")
+
+        room = create_test_room(user_can_pause=True)
+        token = create_test_token(room)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.utils.requests.put") as mocked_requests_put:
+            mocked_requests_put.return_value = MockResponse(
+                {}, status_code=status.HTTP_204_NO_CONTENT
+            )
+            res = self.client.put(url)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(res.data, None)
+
+    def test_pause_track_when_spotify_error(self):
+        url = reverse("pause track")
+
+        room = create_test_room(user_can_pause=True)
+        token = create_test_token(room)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.utils.requests.put") as mocked_requests_put:
+            mocked_requests_put.return_value = MockResponse(
+                {"error": {"status": 418, "message": "Nie"}},
+                status_code=status.HTTP_418_IM_A_TEAPOT,
+            )
+            res = self.client.put(url)
+
+        self.assertEqual(res.status_code, status.HTTP_418_IM_A_TEAPOT, msg=res.json())
+        self.assertEqual(
+            res.data, {"spotify": {"error": {"status": 418, "message": "Nie"}}}
+        )
+
+    # PLAY
+    def test_play_track_when_not_in_a_room_forbidden(self):
+        url = reverse("play track")
+        res = self.client.put(url)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(str(res.data["detail"]), room_permissions.InRoom.message)
+
+    def test_play_track_when_room_rules_not_authorized(self):
+        url = reverse("play track")
+
+        room = create_test_room(user_can_pause=True)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        res = self.client.put(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            str(res.data["detail"]), spotify_permissions.SpotifyAuthorized.message
+        )
+
+    def test_play_track_when_room_rules_not_allow_forbidden(self):
+        url = reverse("play track")
+
+        room = create_test_room(user_can_pause=False)
+        token = create_test_token(room)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+        with patch("spotify.utils.requests.put") as mocked_requests_put:
+            mocked_requests_put.return_value = MockResponse(
+                {}, status.HTTP_403_FORBIDDEN
+            )
+            res = self.client.put(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, msg=res.data)
+
+    def test_play_track_when_allowed(self):
+        url = reverse("play track")
+
+        room = create_test_room(user_can_pause=True)
+        token = create_test_token(room)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.utils.requests.put") as mocked_requests_put:
+            mocked_requests_put.return_value = MockResponse(
+                {}, status_code=status.HTTP_204_NO_CONTENT
+            )
+            res = self.client.put(url)
+
+        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(res.data, None)
+
+    def test_play_track_when_spotify_error(self):
+        url = reverse("play track")
+
+        room = create_test_room(user_can_pause=True)
+        token = create_test_token(room)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.utils.requests.put") as mocked_requests_put:
+            mocked_requests_put.return_value = MockResponse(
+                {"error": {"status": 418, "message": "Nie"}},
+                status_code=status.HTTP_418_IM_A_TEAPOT,
+            )
+            res = self.client.put(url)
+
+        self.assertEqual(res.status_code, status.HTTP_418_IM_A_TEAPOT, msg=res.json())
+        self.assertEqual(
+            res.data, {"spotify": {"error": {"status": 418, "message": "Nie"}}}
+        )
