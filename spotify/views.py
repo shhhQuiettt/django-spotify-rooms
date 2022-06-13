@@ -2,7 +2,14 @@ from time import time
 
 import requests
 from api.models import Room
-from api.permissions import InRoom, IsHost, CanPlayPause, CanControl, HasNotVoted
+from api.permissions import (
+    InRoom,
+    IsHost,
+    CanPlayPause,
+    CanControl,
+    HasNotVoted,
+    TrackInPlayer,
+)
 from api.shortcuts import is_host_or_403, room_code_or_403
 from django.shortcuts import get_object_or_404, redirect
 from django.utils.crypto import get_random_string
@@ -62,6 +69,7 @@ def authentication_callback(request):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        # TODO: Permissions would be much better solution right?
         room_code = room_code_or_403(request.session)
         room = get_object_or_404(Room, code=room_code)
         is_host_or_403(room, request.session)
@@ -74,7 +82,6 @@ def authentication_callback(request):
 
         if res.status_code != status.HTTP_200_OK:
             return Response({"errors": res.json()}, status=status.HTTP_401_UNAUTHORIZED)
-
         data = res.json()
         data["room"] = room.code
         serializer = SpotifyAccessTokenSerializer(data=data)
@@ -157,6 +164,7 @@ class CurrentTrack(APIView):
 
         song_data["artists"] = aritsts
 
+        # Save currnet song id to room instance
         if room.current_song_id != song_data["song_id"]:
             room.current_song_id = song_data["song_id"]
             room.current_votes = 0
@@ -212,12 +220,16 @@ class PlayTrack(APIView):
 
 
 class VoteToSkipTrack(APIView):
-    permission_classes = [InRoom, SpotifyAuthorized, HasNotVoted]
+    permission_classes = [InRoom, SpotifyAuthorized, TrackInPlayer, HasNotVoted]
 
     def put(self, request):
         room_code = request.session["code"]
         room = get_object_or_404(Room, code=room_code)
         self.check_object_permissions(request, room)
+        # res = call_spotify_api(
+        #     "/me/player/next", token=room.spotify_access_token.token, method="POST"
+        # )
+        # return Response(res.json(), 200)
 
         room.current_votes += 1
         request.session["last_voted_song"] = room.current_song_id
@@ -241,5 +253,7 @@ class VoteToSkipTrack(APIView):
 
         room.save()
 
-        status_code = status.HTTP_200_OK if "res" not in locals() else res.status_code
+        status_code = (
+            status.HTTP_204_NO_CONTENT if "res" not in locals() else res.status_code
+        )
         return Response(status=status_code)

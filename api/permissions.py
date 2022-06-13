@@ -59,4 +59,12 @@ class HasNotVoted(permissions.BasePermission):
 
     def has_object_permission(self, request, view, room):
 
-        return request.session.get("last_voted_song", "") != room.current_song_id
+        return request.session.get("last_voted_song") != room.current_song_id
+
+
+class TrackInPlayer(permissions.BasePermission):
+    message = "Nothing is currently playing"
+
+    def has_object_permission(self, request, view, room):
+
+        return room.current_song_id != ""

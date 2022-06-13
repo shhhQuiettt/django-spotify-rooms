@@ -1,16 +1,17 @@
-import os
-from django.test import TestCase
-from rest_framework import status
-from rest_framework.test import APITestCase
-from rest_framework import status
-from .credentials import SPOTIFY_AUTH_URL, SPOTIFY_GET_TOKEN_URL
-from django.urls import reverse
-from api.models import Room
-from spotify.models import SpotifyAccessToken
-from unittest.mock import patch
 import json
+import os
+from unittest.mock import patch
+
 from api import permissions as room_permissions
+from api.models import Room
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
+
 from spotify import permissions as spotify_permissions
+from spotify.models import SpotifyAccessToken
+
+from .credentials import SPOTIFY_AUTH_URL, SPOTIFY_GET_TOKEN_URL
 
 
 def create_test_room(host="0" * 40, votes_to_skip=3, **kwargs):
@@ -91,11 +92,18 @@ class SpotifyAuthorizationTestCase(APITestCase):
         session["code"] = room.code
         session.save()
 
+        pwd = os.path.dirname(__file__)
         with patch(
             "spotify.views.create_or_refresh_token"
         ) as mocked_create_or_refresh_token:
+
+            with open(
+                os.path.join(pwd, "mocks/mock_access_token.json")
+            ) as mock_token_file:
+                test_token_response = json.load(mock_token_file)
+
             mocked_create_or_refresh_token.return_value = MockResponse(
-                json_data=create_test_token(),
+                json_data=test_token_response,
                 status_code=status.HTTP_200_OK,
             )
 
@@ -180,7 +188,7 @@ class TrackControlTestCase(APITestCase):
         create_test_token(room)
 
         with patch("spotify.utils.requests.get") as mocked_requests_get:
-            with open(os.path.join(pwd, "test_data/mock_song.json")) as mock_song_file:
+            with open(os.path.join(pwd, "mocks/mock_song.json")) as mock_song_file:
                 mocked_requests_get.return_value = MockResponse(
                     json_data=json.load(mock_song_file),
                     status_code=status.HTTP_200_OK,
@@ -198,11 +206,50 @@ class TrackControlTestCase(APITestCase):
                 "artists": "Oki",
             }
 
-            self.assertEqual(res.status_code, status.HTTP_200_OK, msg=res.data)
-            self.assertEqual(res.data, expected_data)
+            room.refresh_from_db()
 
-        # self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-        # self.assertEqual(str(res.data["detail"]), "You have to be host of the room")
+            self.assertEqual(res.data, expected_data)
+            self.assertEqual(room.current_song_id, expected_data["song_id"])
+            self.assertEqual(res.status_code, status.HTTP_200_OK, msg=res.data)
+
+    def test_current_track_when_song_changed(self):
+        pwd = os.path.dirname(__file__)
+        url = reverse("current track")
+
+        room = create_test_room()
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        create_test_token(room)
+
+        with patch("spotify.utils.requests.get") as mocked_requests_get:
+            with open(os.path.join(pwd, "mocks/mock_song.json")) as mock_song_file:
+                mocked_requests_get.return_value = MockResponse(
+                    json_data=json.load(mock_song_file),
+                    status_code=status.HTTP_200_OK,
+                )
+
+            res = self.client.get(url)
+
+            old_song_id = res.json()["song_id"]
+
+            with open(os.path.join(pwd, "mocks/mock_song_2.json")) as mock_song_file:
+                mocked_requests_get.return_value = MockResponse(
+                    json_data=json.load(mock_song_file),
+                    status_code=status.HTTP_200_OK,
+                )
+            res = self.client.get(url)
+            new_song_id = res.json()["song_id"]
+
+            room.refresh_from_db()
+            self.assertNotEqual(new_song_id, "")
+            self.assertNotEqual(old_song_id, new_song_id)
+
+
+# self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+# self.assertEqual(str(res.data["detail"]), "You have to be host of the room")
 
 
 class PlayPauseTestCase(APITestCase):
@@ -368,3 +415,161 @@ class PlayPauseTestCase(APITestCase):
         self.assertEqual(
             res.data, {"spotify": {"error": {"status": 418, "message": "Nie"}}}
         )
+
+
+class VoteToSkipTrackTestCase(APITestCase):
+    def test_vote_to_skip_track_when_not_in_a_room(self):
+        url = reverse("vote to skip track")
+        res = self.client.put(url)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(str(res.data["detail"]), room_permissions.InRoom.message)
+
+    def test_vote_to_skip_track_when_not_authorized(self):
+        url = reverse("vote to skip track")
+
+        room = create_test_room(user_can_pause=True)
+
+        session = self.client.session
+        session["code"] = room.code
+        session.save()
+
+        res = self.client.put(url)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            str(res.data["detail"]), spotify_permissions.SpotifyAuthorized.message
+        )
+
+    def test_vote_to_skip_track_when_nothing_plays_forbidden(self):
+        url = reverse("vote to skip track")
+
+        session = self.client.session
+
+        room = create_test_room(host=session.session_key, votes_to_skip=1)
+        create_test_token(room)
+
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.views.call_spotify_api") as mocked_call_spotify_api:
+            mocked_call_spotify_api.return_value = MockResponse(
+                {"shouldnt": "be called"}, status.HTTP_418_IM_A_TEAPOT
+            )
+            res = self.client.put(url)
+
+            self.assertEqual(
+                res.json().get("detail"), room_permissions.TrackInPlayer.message
+            )
+            self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_vote_to_skip_track_host_always_can_skip(self):
+        url = reverse("vote to skip track")
+
+        session = self.client.session
+
+        room = create_test_room(
+            host=session.session_key, votes_to_skip=1, current_song_id="123"
+        )
+        create_test_token(room)
+
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.views.call_spotify_api") as mocked_call_spotify_api:
+            mocked_call_spotify_api.return_value = MockResponse(
+                {}, status.HTTP_204_NO_CONTENT
+            )
+            res = self.client.put(url)
+
+            try:
+                mocked_call_spotify_api.assert_called_once()
+                self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+            except AssertionError as e:
+                print(res.data)
+                raise e
+
+    def test_vote_to_skip_when_not_enaugh_votes(self):
+        url = reverse("vote to skip track")
+
+        session = self.client.session
+
+        room = create_test_room(votes_to_skip=99, current_song_id="123")
+        create_test_token(room)
+
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.views.call_spotify_api") as mocked_call_spotify_api:
+            mocked_call_spotify_api.return_value = MockResponse(
+                {}, status.HTTP_418_IM_A_TEAPOT
+            )
+            res = self.client.put(url)
+            room.refresh_from_db()
+
+            try:
+                mocked_call_spotify_api.assert_not_called()
+                self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+                self.assertEqual(room.current_votes, 1)
+            except AssertionError as e:
+                print(res.data)
+                raise e
+
+    def test_vote_to_skip_when_song_changes_votes_equal_0(self):
+        url = reverse("vote to skip track")
+
+        session = self.client.session
+
+        room = create_test_room(votes_to_skip=99, current_song_id="123")
+        create_test_token(room)
+
+        session["code"] = room.code
+        session.save()
+
+        with patch("spotify.views.call_spotify_api") as mocked_call_spotify_api:
+            mocked_call_spotify_api.return_value = MockResponse(
+                {}, status.HTTP_418_IM_A_TEAPOT
+            )
+
+            self.assertEqual(room.current_votes, 0)
+
+            res = self.client.put(url)
+            room.refresh_from_db()
+            self.assertEqual(room.current_votes, 1)
+
+            pwd = os.path.dirname(__file__)
+            with open(os.path.join(pwd, "mocks/mock_song.json")) as song_mock_file:
+                mocked_call_spotify_api.return_value = MockResponse(
+                    json.load(song_mock_file), status.HTTP_200_OK
+                )
+
+            self.client.get(reverse("current track"))
+            room.refresh_from_db()
+            self.assertEqual(room.current_votes, 0)
+
+    def test_vote_to_skip_track_when_enaugh_votes(self):
+        url = reverse("vote to skip track")
+        second_client = APIClient()
+
+        second_client_session = second_client.session
+        session = self.client.session
+
+        room = create_test_room(votes_to_skip=2, current_song_id="123")
+        create_test_token(room)
+
+        session["code"] = room.code
+        session.save()
+        second_client_session["code"] = room.code
+        second_client_session.save()
+
+        with patch("spotify.views.call_spotify_api") as mocked_call_spotify_api:
+            mocked_call_spotify_api.return_value = MockResponse(
+                {}, status.HTTP_204_NO_CONTENT
+            )
+            self.client.put(url)
+            mocked_call_spotify_api.assert_not_called()
+
+            second_client.put(url)
+            mocked_call_spotify_api.assert_called()
+
+            room.refresh_from_db()
+            self.assertEqual(room.current_votes, 0)
