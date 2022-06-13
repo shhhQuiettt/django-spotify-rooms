@@ -1,7 +1,9 @@
 from rest_framework.test import APITestCase, APIClient
+from rest_framework.exceptions import PermissionDenied
 from rest_framework import status
 from django.urls import reverse
 from .models import Room
+from .shortcuts import room_code_or_403, is_host_or_403
 
 
 def create_room(host="0" * 40, votes_to_skip=3):
@@ -110,4 +112,36 @@ class RoomTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(
             Room.objects.get(code=room.code).votes_to_skip, old_votes_to_skip
+        )
+
+
+class ShortcutsTestCase(APITestCase):
+    def test_room_code_or_403_when_exists(self):
+        room = create_room()
+        session = self.client.session
+        session["code"] = room.code
+        code = room_code_or_403(session)
+        self.assertEqual(code, room.code)
+
+    def test_room_code_or_403_when_not_in_room(self):
+        room = create_room()
+        session = self.client.session
+        self.assertRaises(PermissionDenied, room_code_or_403, session)
+
+    def test_is_host_or_403_when_host(self):
+        session = self.client.session
+        room = create_room(host=session.session_key)
+
+        is_host_or_403(room, session)
+
+    def test_is_host_or_403_when_not_host(self):
+        session = self.client.session
+
+        room = create_room()
+
+        self.assertRaises(
+            PermissionDenied,
+            is_host_or_403,
+            room,
+            session,
         )

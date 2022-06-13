@@ -16,6 +16,7 @@ class RoomRetrieveSerializer(serializers.ModelSerializer):
     code = serializers.ReadOnlyField()
 
 
+# TODO: Creating room shouldn't return host key
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room

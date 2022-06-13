@@ -2,3 +2,5 @@ Django>=3.0,<4.0
 psycopg2>=2.8
 mysqlclient
 djangorestframework >=3.13,<4.0
+python-dotenv
+requests
