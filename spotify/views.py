@@ -197,7 +197,7 @@ class PauseTrack(APIView):
 
 
 class PlayTrack(APIView):
-    permission_classes = [InRoom, SpotifyAuthorized, IsHost | CanControl]
+    permission_classes = [InRoom, SpotifyAuthorized, IsHost | CanPlayPause]
 
     def put(self, request):
         room_code = request.session["code"]

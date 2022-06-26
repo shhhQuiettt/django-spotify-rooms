@@ -11,6 +11,7 @@ class RoomRetrieveSerializer(serializers.ModelSerializer):
             "user_can_pause",
             "user_can_control",
             "created_at",
+            "current_song_id",
         ]
 
     code = serializers.ReadOnlyField()
@@ -27,6 +28,7 @@ class RoomSerializer(serializers.ModelSerializer):
             "user_can_pause",
             "user_can_control",
             "created_at",
+            "current_song_id",
         ]
 
     code = serializers.ReadOnlyField()

@@ -14,9 +14,16 @@ from spotify.models import SpotifyAccessToken
 from .credentials import SPOTIFY_AUTH_URL, SPOTIFY_GET_TOKEN_URL
 
 
-def create_test_room(host="0" * 40, votes_to_skip=3, **kwargs):
+def create_test_room(
+    host="0" * 40, votes_to_skip=3, user_can_control=False, user_can_pause=False
+):
 
-    return Room.objects.create(host=host, votes_to_skip=votes_to_skip, **kwargs)
+    return Room.objects.create(
+        host=host,
+        votes_to_skip=votes_to_skip,
+        user_can_control=user_can_control,
+        user_can_pause=user_can_pause,
+    )
 
 
 def create_test_token(room=None):
@@ -378,7 +385,7 @@ class PlayPauseTestCase(APITestCase):
     def test_play_track_when_allowed(self):
         url = reverse("play track")
 
-        room = create_test_room(user_can_pause=True)
+        room = create_test_room(user_can_pause=True, user_can_control=False)
         token = create_test_token(room)
 
         session = self.client.session
