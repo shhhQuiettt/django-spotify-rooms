@@ -1,0 +1,20 @@
+.room-code {
+    background-color: var(--clr-secondary);
+    border-radius: 1em;
+    box-shadow: var(--shadow);
+    padding: 1em;
+    margin: 1em;
+}
+
+.room-code h1,h2 {
+    margin: 0;
+}
+
+.room-code .inside-shadow {
+width: fit-content;
+padding: 0.2em 0.4em;
+border-radius: 3px;
+-webkit-box-shadow: inset 0px 0px 34px -20px rgba(66, 68, 90, 1);
+-moz-box-shadow: inset 0px 0px 34px -20px rgba(66, 68, 90, 1);
+box-shadow: inset 0px 0px 34px -20px rgba(66, 68, 90, 1);
+}

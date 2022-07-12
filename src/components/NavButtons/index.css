@@ -1,0 +1,28 @@
+.nav-buttons  {
+    display: flex;
+}
+
+.nav-buttons button {
+    margin: 0px;
+    padding: 1em 2em;
+    outline: 1px var(--clr-secondary) solid;
+}
+
+@media screen and (max-width: 600px) {
+    .nav-buttons {
+        flex-direction: column;
+    }
+    .nav-buttons button {
+        width: 80vw;
+    }
+}
+
+.nav-buttons .join-button{
+    background-color: var(--clr-secondary);
+    color: black;
+}
+
+/*
+.nav-buttons .create-button{
+    background-color: var(--clr-primary);
+}*/
