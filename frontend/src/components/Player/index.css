@@ -1,0 +1,128 @@
+.player {
+    background-color: var(--clr-secondary);
+    box-shadow: var(--shadow);
+    border-radius: 0.5em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 600px;
+    min-width: 350px;
+    /* max-width: 900px; */
+    padding: 2em ;
+}
+
+@media screen and (max-width: 600px){
+    .player {
+        flex-direction: column;
+        align-items: center;
+        width: 80vw;
+    }
+    .player .wrapper {
+        min-width: 100%
+    }
+}
+
+
+
+.player img {
+    width: 200px;
+    height: 200px;
+}
+
+.player .wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5em;
+    padding: 2em 1em;
+    width: 60%;
+    
+}
+
+.text-field-wrapper {
+    width:100%;
+}
+.player .song-title {
+    font-size: 32px;
+    margin:0;
+    text-align: center;
+}
+
+.player .song-artists {
+    font-size: 0.8em;
+
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.player .song-artists span {
+    margin-right: 30px;
+    /* This makes scrollWidth work properly on chrome */
+    display: block;
+    position: relative;
+}
+.player .slided-text > span {
+    animation: slide-text 16s infinite linear;
+}
+
+/* TODO: Make prettier slide animation  */
+@keyframes slide-text {
+    5%{
+        transform: translateX(0%);
+    }
+   50%,55%{
+        transform: translateX(-100%);
+        right: 0;
+    }
+}
+
+
+.player .progress-panel {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.progress-panel .status-bar {
+    background-color: var(--clr-gray);
+    width: 95%;
+    height: 3px;
+    margin: 2%;
+    border-radius: 1px;
+}
+
+.progress-panel .status-bar-progress {
+    color: var(--clr-primary);
+    height:inherit; 
+    border-radius: 1px;
+    background-color: black;
+}
+
+.control-panel {
+    display: flex;
+    gap: 1em;
+
+}
+.control-panel button {
+    background-color: transparent;
+    font-size: 1em;
+    width: 2.5em;
+    height: 2.5em;
+    border: 2px black solid;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    color: black;
+    margin: 0.5em;
+}
+
+.control-panel button:hover {
+    box-shadow: 0 0 0;
+    border-width: 2.5px;
+}
