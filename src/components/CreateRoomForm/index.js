@@ -17,6 +17,7 @@ const CreateRoomForm = () => {
 
   const [error, setError] = useState(null);
   const onSubmit = async (data) => {
+    data = { ...data, user_can_pause: data.user_can_pause == "true" };
     let err = await createRoom(data);
     err?.message ? setError(err.message) : navigate("/room");
   };
@@ -36,7 +37,11 @@ const CreateRoomForm = () => {
             id="votes-to-skip"
             className="narrow-input"
             defaultValue={3}
-            {...register("votes_to_skip", { required: true, min: 1 })}
+            {...register("votes_to_skip", {
+              valueAsNumber: true,
+              required: true,
+              min: 1,
+            })}
           />
         </label>
       </div>
