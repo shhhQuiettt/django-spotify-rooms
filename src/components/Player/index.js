@@ -5,25 +5,35 @@ import { BsFillSkipEndFill, BsFillSkipStartFill } from "react-icons/bs";
 import { getTrack } from "../../service";
 
 const Player = () => {
-  let testData = {
-    title: "Piosenka",
-    duration_s: 194,
-    progress_s: 23,
-    album_cover_url:
-      "https://freepsdflyer.com/wp-content/uploads/2021/06/Free-Spotify-Album-Cover-PSD-Template.jpg",
-    is_playing: false,
-    artists: "Taco hamingway, White 2115, Krzysztof Krawczyk, Fryderyk Chopin",
-    // artists: "Oki",
-    song_id: "123445",
-  };
+  // let testData = {
+  //   title: "Piosenka",
+  //   duration_s: 194,
+  //   progress_s: 23,
+  //   album_cover_url:
+  //     "https://freepsdflyer.com/wp-content/uploads/2021/06/Free-Spotify-Album-Cover-PSD-Template.jpg",
+  //   is_playing: false,
+  //   artists: "Taco hamingway, White 2115, Krzysztof Krawczyk, Fryderyk Chopin",
+  //   // artists: "Oki",
+  //   song_id: "123445",
+  // };
 
-  const [currentTrack, setCurrentTrack] = useState(testData);
+  const [currentTrack, setCurrentTrack] = useState({});
 
   const [error, setError] = useState(null);
   const refreshTrack = async () => {
     const [track, err] = await getTrack();
-    err ? setError(err) : setCurrentTrack(track);
+    err?.message ? setError(err.message) : setCurrentTrack(track);
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshTrack();
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  });
 
   // TODO: There MUST be a better way of doing this, this is so retardet
   //This prevents calling slideTextField useRef hook,

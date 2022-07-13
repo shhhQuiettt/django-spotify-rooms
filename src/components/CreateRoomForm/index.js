@@ -18,7 +18,7 @@ const CreateRoomForm = () => {
   const [error, setError] = useState(null);
   const onSubmit = async (data) => {
     let err = await createRoom(data);
-    err?.message && setError(err.message);
+    err?.message ? setError(err.message) : navigate("/room");
   };
 
   return (
@@ -68,6 +68,7 @@ const CreateRoomForm = () => {
       <button type="submit" data-testid="create-button">
         Create
       </button>
+      {error && <div className="error-field">{error}</div>}
     </form>
   );
 };
