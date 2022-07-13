@@ -1,8 +1,14 @@
 import axios from "axios";
 
 export const createRoom = async (roomData) => {
+  console.log(roomData);
   try {
-    const response = await axios.post("/api/room/create", roomData);
+    const response = await axios.post("/api/room/create", roomData, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
     localStorage.setItem("roomCode", response.data.code);
     return null;
   } catch (error) {
@@ -11,9 +17,9 @@ export const createRoom = async (roomData) => {
   }
 };
 
-export const joinRoom = async (roomCode) => {
+export const joinRoom = async (roomData) => {
   try {
-    const response = await axios.get("/api/room/" + roomCode);
+    const response = await axios.get("/api/room/" + roomData.code);
     localStorage.setItem("roomCode", response.data.code);
     return null;
   } catch (error) {
