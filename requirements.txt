@@ -4,3 +4,5 @@ mysqlclient
 djangorestframework >=3.13,<4.0
 python-dotenv
 requests
+django-cors-headers
+redgreenunittest

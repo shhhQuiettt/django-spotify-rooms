@@ -21,5 +21,17 @@ urlpatterns = [
     path("api/", include("api.urls")),
     path("spotify/", include("spotify.urls")),
     path("admin/", admin.site.urls),
-    re_path(".*", TemplateView.as_view(template_name="index.html")),
+    path("", TemplateView.as_view(template_name="index.html")),
+    # Frontend url
+    path("room", TemplateView.as_view(template_name="index.html"), name="front room"),
+    path(
+        "room/create",
+        TemplateView.as_view(template_name="index.html"),
+        name="front room create",
+    ),
+    path(
+        "room/join",
+        TemplateView.as_view(template_name="index.html"),
+        name="front room join",
+    ),
 ]

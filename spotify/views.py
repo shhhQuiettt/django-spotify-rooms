@@ -18,6 +18,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.urls import reverse
 
 from spotify.permissions import SpotifyAuthorized
 
@@ -34,6 +35,7 @@ from .serializers import SpotifyAccessTokenSerializer
 from .utils import call_spotify_api, create_or_refresh_token
 
 
+# Sends url for spotify authorization process
 @api_view(["GET"])
 # TODO: implement permission approach
 # @permission_classes([IsHost])
@@ -52,7 +54,16 @@ def authenticate_spotify(request):
             "state": STATE,
         }
         url = f"{SPOTIFY_AUTH_URL}?{urlencode(redirect_data)}"
-        return redirect(url, permanent=True)
+
+        # return redirect(url, permanent=True)
+        # return redirect(url)
+
+        # return Response({"url": url})
+        # return redirect("https:/archlinux.org", permanent=True)
+
+        # res["Access-Control-Allow-Origin"] = "*"
+        return Response({"url": url})
+        # return Response(res)
 
 
 # TODO: Change to class-based view =>
@@ -89,9 +100,10 @@ def authentication_callback(request):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
 
-        return Response(
-            {"message": "Successfully authorized"}, status=status.HTTP_200_OK
-        )
+        # return Response(
+        #     {"message": "Successfully authorized"}, status=status.HTTP_200_OK
+        # )
+        return redirect(reverse("front room"))
 
 
 # TODO: implement class-basef view nad generics update
@@ -123,7 +135,7 @@ def refresh_token(request):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
 
-        return Response(
+        return redirect(
             {"message": "Successfully refreshed"}, status=status.HTTP_200_OK
         )
 

@@ -15,7 +15,11 @@ from .credentials import SPOTIFY_AUTH_URL, SPOTIFY_GET_TOKEN_URL
 
 
 def create_test_room(
-    host="0" * 40, votes_to_skip=3, user_can_control=False, user_can_pause=False
+    host="0" * 40,
+    votes_to_skip=3,
+    user_can_control=False,
+    user_can_pause=False,
+    current_song_id="",
 ):
 
     return Room.objects.create(
@@ -23,6 +27,7 @@ def create_test_room(
         votes_to_skip=votes_to_skip,
         user_can_control=user_can_control,
         user_can_pause=user_can_pause,
+        current_song_id=current_song_id,
     )
 
 
@@ -60,7 +65,7 @@ class SpotifyAuthorizationTestCase(APITestCase):
         session["code"] = room.code
         session.save()
 
-        res = self.client.get(reverse("spotify_authorization"))
+        res = self.client.get(reverse("spotify authorization"))
         self.assertEqual(
             res.status_code,
             status.HTTP_301_MOVED_PERMANENTLY,
@@ -84,12 +89,12 @@ class SpotifyAuthorizationTestCase(APITestCase):
         room = create_test_room()
         session["code"] = room.code
         session.save()
-        res = self.client.get(reverse("spotify_authorization"))
+        res = self.client.get(reverse("spotify authorization"))
 
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_authenticate_spotify_when_not_in_room(self):
-        res = self.client.get(reverse("spotify_authorization"))
+        res = self.client.get(reverse("spotify authorization"))
 
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
