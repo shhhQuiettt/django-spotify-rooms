@@ -62,7 +62,8 @@ const Player = () => {
           <div className="progress-panel">
             <div className="current-s">
               {Math.floor(currentTrack["progress_s"] / 60)}:
-              {currentTrack["progress_s"] % 60}
+              {currentTrack["progress_s"] % 60 < 10 && "0"}
+              {parseInt(currentTrack["progress_s"] % 60)}
             </div>
             <div className="status-bar">
               <div
@@ -77,7 +78,8 @@ const Player = () => {
             </div>
             <div className="song-length">
               {Math.floor(currentTrack["duration_s"] / 60)}:
-              {currentTrack["duration_s"] % 60}
+              {currentTrack["duration_s"] % 60 < 10 && "0"}
+              {parseInt(currentTrack["duration_s"] % 60)}
             </div>
           </div>
           <div className="control-panel">
@@ -86,7 +88,7 @@ const Player = () => {
             </button>
             <button
               className="play-pause"
-              onChange={() => {
+              onClick={() => {
                 let err = currentTrack["is_playing"]
                   ? pauseTrack()
                   : playTrack();
@@ -94,7 +96,7 @@ const Player = () => {
               }}
               data-testid="play-pause-button"
             >
-              {currentTrack["is_playing"] ? <FaPlay /> : <FaPause />}
+              {currentTrack["is_playing"] ? <FaPause /> : <FaPlay />}
             </button>
             <button
               className="skip"
