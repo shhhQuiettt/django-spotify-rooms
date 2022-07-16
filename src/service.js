@@ -1,15 +1,17 @@
 import axios from "axios";
 
 export const createRoom = async (roomData) => {
-  console.log(roomData);
   try {
-    const response = await axios.post("/api/room/create", roomData, {
+    let response = await axios.post("/api/room/create", roomData, {
       headers: {
         "Content-Type": "application/json",
       },
     });
 
+    const authUrl = response.data.url;
     localStorage.setItem("roomCode", response.data.code);
+    window.location.replace(authUrl);
+
     return null;
   } catch (error) {
     console.log(error);
@@ -27,11 +29,41 @@ export const joinRoom = async (roomData) => {
   }
 };
 
+export const playTrack = async () => {
+  try {
+    await axios.put("/api/track/play");
+    return null;
+  } catch (error) {
+    console.log(error);
+    return error;
+  }
+};
+export const pauseTrack = async () => {
+  try {
+    await axios.put("/api/track/pause");
+    return null;
+  } catch (error) {
+    console.log(error);
+    return error;
+  }
+};
+
 export const getTrack = async () => {
   try {
     const response = await axios.get("/spotify/track/current");
     return [response.data, null];
   } catch (error) {
+    console.log(error);
     return [null, error];
+  }
+};
+
+export const voteToSkip = async () => {
+  try {
+    await axios.put("/spotify/track/vote-to-skip");
+    return null;
+  } catch (error) {
+    console.log(error);
+    return error;
   }
 };

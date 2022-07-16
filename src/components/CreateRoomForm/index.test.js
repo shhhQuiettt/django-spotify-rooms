@@ -28,7 +28,7 @@ describe("form does not submit when not valid", () => {
 });
 
 describe("Form is submited if valid", () => {
-  const defaultFormData = { votes_to_skip: "3", user_can_pause: "true" };
+  const defaultFormData = { votes_to_skip: 3, user_can_pause: true };
 
   test("case 1", async () => {
     const { getByText, getByLabelText } = render(<CreateRoomForm />);
@@ -49,8 +49,8 @@ describe("Form is submited if valid", () => {
 
     await user.click(screen.getByText("Create"));
     expect(createRoom).toHaveBeenCalledWith({
-      votes_to_skip: "13",
-      user_can_pause: "false",
+      votes_to_skip: 13,
+      user_can_pause: false,
     });
   });
 
@@ -65,8 +65,8 @@ describe("Form is submited if valid", () => {
     await user.click(screen.getByTestId("create-button"));
 
     expect(createRoom).toHaveBeenCalledWith({
-      votes_to_skip: "101",
-      user_can_pause: "true",
+      votes_to_skip: 101,
+      user_can_pause: true,
     });
   });
 });
