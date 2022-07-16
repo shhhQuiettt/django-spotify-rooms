@@ -2,21 +2,14 @@ import React, { useRef, useState, useEffect } from "react";
 import "./index.css";
 import { FaPlay, FaPause } from "react-icons/fa";
 import { BsFillSkipEndFill, BsFillSkipStartFill } from "react-icons/bs";
-import { getTrack } from "../../service";
+import { getTrack, voteToSkip, playTrack, pauseTrack } from "../../service";
 
 const Player = () => {
-  // let testData = {
-  //   title: "Piosenka",
-  //   duration_s: 194,
-  //   progress_s: 23,
-  //   album_cover_url:
-  //     "https://freepsdflyer.com/wp-content/uploads/2021/06/Free-Spotify-Album-Cover-PSD-Template.jpg",
-  //   is_playing: false,
-  //   artists: "Taco hamingway, White 2115, Krzysztof Krawczyk, Fryderyk Chopin",
-  //   // artists: "Oki",
-  //   song_id: "123445",
-  // };
-
+  // await setTimeout(async () => {
+  //   await user.click(getByTestId("play-pause-button"));
+  // }, 1500);    // await setTimeout(async () => {
+  //   await user.click(getByTestId("play-pause-button"));
+  // }, 1500);
   const [currentTrack, setCurrentTrack] = useState({});
 
   const [error, setError] = useState(null);
@@ -91,10 +84,25 @@ const Player = () => {
             <button className="previous">
               <BsFillSkipStartFill />
             </button>
-            <button className="play-pause">
+            <button
+              className="play-pause"
+              onChange={() => {
+                let err = currentTrack["is_playing"]
+                  ? pauseTrack()
+                  : playTrack();
+                err?.message && setError(err.message);
+              }}
+              data-testid="play-pause-button"
+            >
               {currentTrack["is_playing"] ? <FaPlay /> : <FaPause />}
             </button>
-            <button className="skip">
+            <button
+              className="skip"
+              onClick={() => {
+                voteToSkip();
+              }}
+              data-testid="skip-button"
+            >
               <BsFillSkipEndFill />
             </button>
           </div>
