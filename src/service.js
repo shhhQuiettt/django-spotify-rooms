@@ -31,7 +31,7 @@ export const joinRoom = async (roomData) => {
 
 export const playTrack = async () => {
   try {
-    await axios.put("/api/track/play");
+    await axios.put("/spotify/track/play");
     return null;
   } catch (error) {
     console.log(error);
@@ -40,7 +40,7 @@ export const playTrack = async () => {
 };
 export const pauseTrack = async () => {
   try {
-    await axios.put("/api/track/pause");
+    await axios.put("/spotify/track/pause");
     return null;
   } catch (error) {
     console.log(error);
