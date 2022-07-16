@@ -1,10 +1,13 @@
 import json
 import os
+from datetime import timedelta
 from unittest.mock import patch
 
 from api import permissions as room_permissions
 from api.models import Room
+from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
@@ -14,6 +17,7 @@ from spotify.models import SpotifyAccessToken
 from .credentials import SPOTIFY_AUTH_URL, SPOTIFY_GET_TOKEN_URL
 
 
+#####TEST HELPERS
 def create_test_room(
     host="0" * 40,
     votes_to_skip=3,
@@ -56,6 +60,21 @@ class MockResponse:
 
     def json(self):
         return self.json_data
+
+
+#######
+
+
+class SpotifyAccessTokenTestCase(TestCase):
+    def test_is_expired_is_true_when_expired(self):
+        old_time = timezone.now() - timedelta(days=210)
+        token = create_test_token()
+        token.created_at = old_time
+        self.assertTrue(token.is_expired())
+
+    def test_is_expired_is_false_when_not_expired(self):
+        token = create_test_token()
+        self.assertFalse(token.is_expired())
 
 
 class SpotifyAuthorizationTestCase(APITestCase):

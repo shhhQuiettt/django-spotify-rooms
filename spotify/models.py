@@ -1,5 +1,7 @@
 from django.db import models
 from api.models import Room
+from datetime import timedelta
+from django.utils import timezone
 
 
 class SpotifyAccessToken(models.Model):
@@ -15,3 +17,6 @@ class SpotifyAccessToken(models.Model):
     refresh_token = models.CharField(max_length=256)
     created_at = models.DateTimeField(auto_now=True)
     expires_in = models.PositiveIntegerField()
+
+    def is_expired(self):
+        return self.created_at + timedelta(seconds=self.expires_in) < timezone.now()
