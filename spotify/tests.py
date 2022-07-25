@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 from unittest.mock import patch
 
 from api import permissions as room_permissions
@@ -278,9 +278,37 @@ class TrackControlTestCase(APITestCase):
             self.assertNotEqual(new_song_id, "")
             self.assertNotEqual(old_song_id, new_song_id)
 
+    def test_current_track_refreshes_token_if_expired(self):
+        url = reverse("current track")
 
-# self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
-# self.assertEqual(str(res.data["detail"]), "You have to be host of the room")
+        room = create_test_room()
+
+        token = create_test_token(room=room)
+        future_date = timezone.now() + timedelta(days=124)
+
+        with patch("spotify.models.SpotifyAccessToken.is_expired") as mocked_is_expired:
+            mocked_is_expired.return_value = True
+            with patch(
+                "spotify.views.create_or_refresh_token"
+            ) as mocked_create_or_refresh_token:
+                mocked_refresh_token = {
+                    "token": "BAghSW8TbttNHo4PqsdfgsdgggghhhhhN2110rn8tAdVSteKPN_KCGYmobKdUxJrh0bWlCYa7WuZJer9E8lqJA608w65Sar8ayeJ1m6rmwzQ5wCn38Wji9DR3LiBv-RYDADeYcdMssEGBIkndwftAjv8hxEWLbdlWGekK5QZdcceozVCAkMIQ",
+                    "token_type": "Bearer",
+                    "expires_in": 3600,
+                    "scope": "user-modify-playback-state user-read-playback-state user-read-currently-playing",
+                }
+                mocked_create_or_refresh_token.return_value = MockResponse(
+                    json_data=mocked_refresh_token, status_code=status.HTTP_200_OK
+                )
+
+                session = self.client.session
+                session["code"] = room.code
+                session.save()
+                res = self.client.get(url)
+                print(res.data)
+
+                self.assertTrue(token.is_expired())
+                mocked_create_or_refresh_token.assert_called()
 
 
 class PlayPauseTestCase(APITestCase):

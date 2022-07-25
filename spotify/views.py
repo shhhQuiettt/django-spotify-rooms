@@ -62,7 +62,7 @@ def authenticate_spotify(request):
         # return redirect("https:/archlinux.org", permanent=True)
 
         # res["Access-Control-Allow-Origin"] = "*"
-        return Response({"url": url})
+        return Response({"code": room_code, "url": url})
         # return Response(res)
 
 
@@ -149,6 +149,21 @@ class CurrentTrack(APIView):
         room_code = request.session["code"]
         room = get_object_or_404(Room, code=room_code)
         self.check_object_permissions(request, room)
+
+        # Refresh token if expired
+        # print(f"In roomm ad {room.spotify_access_token.is_expired()}")
+        if room.spotify_access_token.is_expired():
+            res = create_or_refresh_token(room)
+            if res.status_code != status.HTTP_200_OK:
+                return Response(
+                    {"errors": res.json()}, status=status.HTTP_401_UNAUTHORIZED
+                )
+            serializer = SpotifyAccessTokenSerializer(
+                room.spotify_access_token, res.json(), partial=True
+            )
+            serializer.is_valid(raise_exception=True)
+
+            serializer.save()
 
         res = call_spotify_api(
             GET_TRACK_ENDPOINT, token=room.spotify_access_token.token

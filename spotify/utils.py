@@ -10,6 +10,7 @@ import requests
 
 # TODO: this function should create token instance or be renamed to  get_...
 def create_or_refresh_token(room, request_code=None):
+    # requests.post("wp.pl", {})
     # authorization_value = f"{CLIENT_ID}:{CLIENT_SECRET}"
     headers = {
         # "Authorization": urlsafe_b64encode(authorization_value.encode("ascii")),

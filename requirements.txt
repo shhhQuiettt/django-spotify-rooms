@@ -6,3 +6,4 @@ python-dotenv
 requests
 django-cors-headers
 redgreenunittest
+coverage
