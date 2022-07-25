@@ -224,6 +224,7 @@ class TrackControlTestCase(APITestCase):
                 "is_playing": True,
                 "song_id": "00KWg3ywQZVELTUa1U2vsx",
                 "artists": "Oki",
+                "current_votes": 0,
             }
 
             room.refresh_from_db()

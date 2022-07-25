@@ -190,6 +190,7 @@ class CurrentTrack(APIView):
         aritsts = ", ".join([artist["name"] for artist in data["item"]["artists"]])
 
         song_data["artists"] = aritsts
+        song_data["current_votes"] = room.current_votes
 
         # Save currnet song id to room instance
         if room.current_song_id != song_data["song_id"]:
