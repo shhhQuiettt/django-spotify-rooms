@@ -78,7 +78,7 @@ class SpotifyAccessTokenTestCase(TestCase):
 
 
 class SpotifyAuthorizationTestCase(APITestCase):
-    def test_authenticate_spotify_redirects(self):
+    def test_authenticate_spotify_returns_url(self):
         session = self.client.session
         room = create_test_room(session.session_key)
         session["code"] = room.code
@@ -87,21 +87,10 @@ class SpotifyAuthorizationTestCase(APITestCase):
         res = self.client.get(reverse("spotify authorization"))
         self.assertEqual(
             res.status_code,
-            status.HTTP_301_MOVED_PERMANENTLY,
-            msg=f"Response data: {res.get('data')}",
+            status.HTTP_200_OK,
+            msg=f"Response data: {res.data}",
         )
-        # assertRedirects doesnt have common unittest "msg" parameter
-        # try:
-        #     self.assertRedirects(
-        #         res,
-        #         SPOTIFY_AUTH_URL,
-        #         status_code=status.HTTP_301_MOVED_PERMANENTLY,
-        #         fetch_redirect_response=False,
-        #     )
-        # except AssertionError as e:
-        #     if hasattr(res, "data"):
-        #         print(res.data)
-        #     raise e
+        self.assertIn("url", res.data.keys(), msg=res.data)
 
     def test_authenticate_spotify_when_not_host(self):
         session = self.client.session
@@ -143,7 +132,7 @@ class SpotifyAuthorizationTestCase(APITestCase):
                 {"code": "1234", "state": "123"},
             )
 
-            self.assertEqual(res.status_code, status.HTTP_200_OK, msg=f"{res.data}")
+            self.assertEqual(res.status_code, status.HTTP_302_FOUND)
             self.assertEqual(
                 SpotifyAccessToken.objects.filter(room=room.code).count(), 1
             )

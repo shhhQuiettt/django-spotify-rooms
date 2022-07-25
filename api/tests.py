@@ -16,7 +16,14 @@ def create_room(host="0" * 40, votes_to_skip=3):
 
 class RoomTestCase(APITestCase):
     retrieve_fields = set(
-        ["code", "votes_to_skip", "user_can_control", "user_can_pause", "created_at"]
+        [
+            "code",
+            "votes_to_skip",
+            "user_can_control",
+            "user_can_pause",
+            "created_at",
+            "current_song_id",
+        ]
     )
 
     def test_create_room_new_room(self):
@@ -27,7 +34,7 @@ class RoomTestCase(APITestCase):
         response = self.client.post(url, data, format="json")
         session = self.client.session
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(Room.objects.count(), 1)
         room = Room.objects.get()
         self.assertEqual(room.host, session.session_key)

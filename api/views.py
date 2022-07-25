@@ -49,13 +49,13 @@ class RoomCreateView(
         serializer.save(host=self.request.session.session_key)
 
     def post(self, request, *args, **kwargs):
-        # if Room.objects.filter(host=request.session.session_key).exists():
-        #     return Response(
-        #         data={
-        #             "error": "You already have a room created",
-        #         },
-        #         status=status.HTTP_400_BAD_REQUEST,
-        #     )
+        if Room.objects.filter(host=request.session.session_key).exists():
+            return Response(
+                data={
+                    "error": "You already have a room created",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if not request.session.exists(request.session.session_key):
             request.session.create()
