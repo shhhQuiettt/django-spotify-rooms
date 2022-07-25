@@ -23,6 +23,7 @@ export const joinRoom = async (roomData) => {
   try {
     const response = await axios.get("/api/room/" + roomData.code);
     localStorage.setItem("roomCode", response.data.code);
+    localStorage.setItem("votesToSkip", response.votes_to_skip);
     return null;
   } catch (error) {
     return error;

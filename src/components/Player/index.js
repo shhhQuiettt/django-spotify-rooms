@@ -5,12 +5,11 @@ import { BsFillSkipEndFill, BsFillSkipStartFill } from "react-icons/bs";
 import { getTrack, voteToSkip, playTrack, pauseTrack } from "../../service";
 
 const Player = () => {
-  // await setTimeout(async () => {
-  //   await user.click(getByTestId("play-pause-button"));
-  // }, 1500);    // await setTimeout(async () => {
-  //   await user.click(getByTestId("play-pause-button"));
-  // }, 1500);
-  const [currentTrack, setCurrentTrack] = useState({});
+  const [currentTrack, setCurrentTrack] = useState({ "current-votes": 0 });
+
+  const [votesToSkip, setVoteToSkip] = useState(
+    localStorage.getItem("votesToSkip")
+  );
 
   const [error, setError] = useState(null);
   const refreshTrack = async () => {
@@ -103,6 +102,7 @@ const Player = () => {
               onClick={() => {
                 voteToSkip();
               }}
+              data-votes={`${currentTrack["current-votes"]}/${votesToSkip}`}
               data-testid="skip-button"
             >
               <BsFillSkipEndFill />
