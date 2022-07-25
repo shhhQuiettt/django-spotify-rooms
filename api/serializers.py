@@ -15,6 +15,7 @@ class RoomRetrieveSerializer(serializers.ModelSerializer):
         ]
 
     code = serializers.ReadOnlyField()
+    current_song_id = serializers.ReadOnlyField()
 
 
 # TODO: Creating room shouldn't return host key
