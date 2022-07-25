@@ -120,9 +120,32 @@
     cursor: pointer;
     color: black;
     margin: 0.5em;
+    position: relative;
 }
 
 .control-panel button:hover {
     box-shadow: 0 0 0;
     border-width: 2.5px;
+}
+
+.control-panel button.skip::after {
+    content: attr(data-votes);
+    /* content: "1/3"; */
+    font-size: 0.7em;
+    scale: 1;
+    position: absolute;
+    box-shadow: var(--shadow);
+    color: white;
+    background-color: black;
+    padding: 0.3em;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    top: 100%;
+    left: 100%;
+    transform: translate(-65%, -65%);
+    
+
 }
