@@ -21,7 +21,7 @@ const JoinRoomForm = () => {
   const [error, setError] = useState(null);
   const onSubmit = async (data) => {
     let err = await joinRoom(data);
-    err?.message && setError(err.message);
+    err?.message ? setError(err.message) : navigate("/room");
   };
 
   // TODO: Create error message

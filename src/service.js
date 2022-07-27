@@ -10,6 +10,7 @@ export const createRoom = async (roomData) => {
 
     const authUrl = response.data.url;
     localStorage.setItem("roomCode", response.data.code);
+    localStorage.setItem("votesToSkip", response.data.votes_to_skip);
     window.location.replace(authUrl);
 
     return null;
@@ -23,7 +24,7 @@ export const joinRoom = async (roomData) => {
   try {
     const response = await axios.get("/api/room/" + roomData.code);
     localStorage.setItem("roomCode", response.data.code);
-    localStorage.setItem("votesToSkip", response.votes_to_skip);
+    localStorage.setItem("votesToSkip", response.data.votes_to_skip);
     return null;
   } catch (error) {
     return error;
