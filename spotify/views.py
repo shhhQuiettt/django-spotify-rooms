@@ -44,7 +44,8 @@ def authenticate_spotify(request):
         # Checks if user is in a room and if he is the host
         room_code = room_code_or_403(request.session)
 
-        is_host_or_403(get_object_or_404(Room, code=room_code), request.session)
+        room = get_object_or_404(Room, code=room_code)
+        is_host_or_403(room, request.session)
 
         redirect_data = {
             "response_type": "code",
@@ -55,15 +56,9 @@ def authenticate_spotify(request):
         }
         url = f"{SPOTIFY_AUTH_URL}?{urlencode(redirect_data)}"
 
-        # return redirect(url, permanent=True)
-        # return redirect(url)
-
-        # return Response({"url": url})
-        # return redirect("https:/archlinux.org", permanent=True)
-
-        # res["Access-Control-Allow-Origin"] = "*"
-        return Response({"code": room_code, "url": url})
-        # return Response(res)
+        return Response(
+            {"code": room_code, "url": url, "votes_to_skip": room.votes_to_skip}
+        )
 
 
 # TODO: Change to class-based view =>
